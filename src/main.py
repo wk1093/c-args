@@ -190,6 +190,7 @@ if __name__ == "__main__":
         print("Options: -g: debug mode (doesnt delete temporary files")
         print("         -t: translate only (creates .c file with same name as .carg file)")
         print("         -o: output file (default: main)")
+        print("         -I: include directory (not supported yet)")
 
         
         exit(1)
@@ -205,6 +206,9 @@ if __name__ == "__main__":
         if sys.argv[i] == "-g":
             dbg = True
             continue
+        elif sys.argv[i] == "-I":
+            print("Include directory is not supported yet")
+            exit(1) # TODO
         elif sys.argv[i] == "-t":
             translateOnly = True
             continue
