@@ -4,19 +4,14 @@ from preproc import preproc
 import re
 import ccomp
 import os
+import time
 
-outfile = "main"
 fancy = True
+preprocess = False
 
 lg = LexerGenerator()
 
-lg.add('FUNCTION', r'safe')
-lg.add('RETURN', r'ret\s*(.*?);')
-lg.add('EXPAND', r'expand\s*(.*?)\s*=\s*(.*?);')
-lg.add('OUT', r'out\(.*?\)')
-lg.add('FAIL', r'fail\(.*?\)')
 lg.add('PREPRO', r'#.*')
-lg.add("ID", r"[a-zA-Z_][a-zA-Z0-9_]*")
 lg.add("NUMBER", r"\d+")
 lg.add("DOUBLE", r"\d+\.\d+")
 lg.add("FLOAT", r"\d+\.\d+f")
@@ -70,6 +65,20 @@ lg.add("DIVIDE", r"/")
 lg.add("MODULO", r"%")
 lg.add("ASSIGN", r"=")
 
+
+# 'import "test.harg";'
+lg.add('IMPORT', r'import\s*".*?";')
+lg.add('FUNCTION', r'safe')
+lg.add('RETURNN', r'ret\s*;')
+lg.add('RETURN', r'ret(\s)+(.*?);')
+# EXPAND: expand int a, int b = integertuple(5, 2);
+lg.add('EXPAND', r'expand\s*(.*?)\s*=\s*(.*?);')
+
+lg.add('OUT', r'out\(.*?\)')
+lg.add('FAIL', r'fail\(.*?\)')
+
+lg.add("ID", r"[a-zA-Z_][a-zA-Z0-9_]*")
+
 lg.ignore(r'[\s|\n|\t]+')
 lg.ignore(r'//.*')
 
@@ -77,6 +86,8 @@ lexer = lg.build()
 
 
 def compile(a, b):
+    files = [] # additional files that need to be deleted after compilation
+
     with open(a, "r") as f:
         test = f.read()
     with open("carg.h", "r") as f:
@@ -99,6 +110,8 @@ def compile(a, b):
             for i, v in enumerate(vals):
                 out += f"__c_ret(({v}), {i});"
             out += "return 0;"
+        elif token.name == "RETURNN":
+            out += "return 0;"
         elif token.name == "EXPAND":
             variables = [a.strip() for a in token.value[7:].split("=")[0].strip().split(",")]
             callnoend = token.value[7:].split("=")[1].strip()[:-2]
@@ -112,46 +125,88 @@ def compile(a, b):
             for v in variables:
                 out += v + ";"
             out += ");"
-        
         elif token.name == "PREPRO":
             out += token.value + "\n"
+        elif token.name == "IMPORT":
+            start = token.value.find('"')
+            end = token.value.find('"', start + 1)
+            fname = token.value[start + 1:end]
+            out += f"#include \"{fname}.h\"\n"
+            f = compile(fname, fname + ".h")
+            files += f
+            files += [fname + ".h"]
         else:
             out += token.value + " "
-
-    out = preproc(out)
+    if preprocess:
+        out = preproc(out)
 
     out = re.sub(r"#line.*\n", "", out)
     out = re.sub(r";;", ";", out)
 
     with open(b, "w+") as f:
         f.write(out)
+    return files
 
 if __name__ == "__main__":
+    outfile = "main"
     if len(sys.argv) < 2:
-        print("Usage: python main.py <file(s)>")
-        print("Example: python main.py test.carg test2.carg -> test.c test2.c")
+        print(f"Usage: { sys.argv[0] } <file(s)> [-g] [-t] [-o <output>]")
+        print(f"Example: { sys.argv[0] } test.carg test2.carg -o main.exe")
+        print("Options: -g: debug mode (doesnt delete temporary files")
+        print("         -t: translate only (creates .c file with same name as .carg file)")
+        print("         -o: output file (default: main)")
+
+        
         exit(1)
     compiled = []
     dbg = False
+    translateOnly = False
+    skip = False
+    files = []
     for i in range(1, len(sys.argv)):
+        if skip:
+            skip = False
+            continue
         if sys.argv[i] == "-g":
             dbg = True
+            continue
+        elif sys.argv[i] == "-t":
+            translateOnly = True
+            continue
+        elif sys.argv[i] == "-o":
+            skip = True
+            if i == len(sys.argv) - 1:
+                print("Error: -o requires an argument")
+                exit(1)
+            if not translateOnly:
+                outfile = sys.argv[i+1]
+            else:
+                print("Warning: -o is ignored when translating only")
             continue
         elif not sys.argv[i].endswith(".carg"):
             print("Warning: file", sys.argv[i], "does not end with .carg, skipping")
             continue
-        print("Compiling", sys.argv[i], "to", ".".join(sys.argv[i].split(".")[:-1]) + ".c")
-        compile(sys.argv[i], ".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        print("Translating", sys.argv[i])
+        f = compile(sys.argv[i], ".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        for l in f:
+            if l not in files:
+                files.append(l)
         compiled.append(".".join(sys.argv[i].split(".")[:-1]) + ".c")
         if fancy:
             ccomp.format(".".join(sys.argv[i].split(".")[:-1]) + ".c")
-        ccomp.cmp(".".join(sys.argv[i].split(".")[:-1]) + ".c")
-        
     
-    if not dbg:
+    if not translateOnly:
+        for i in compiled:
+            print("Compiling", i+"arg")
+            ccomp.cmp(i)
+            time.sleep(0.1)
+    
+    if not dbg and not translateOnly:
         for i in compiled:
             os.remove(i)
-
-    print("Linking", str(compiled)[1:-1], "to", outfile)
-    ccomp.link(compiled, outfile)
+        for i in files:
+            os.remove(i)
+    if not translateOnly:
+        print("Linking", str([a+'arg' for a in compiled])[1:-1], "to", outfile)
+        ccomp.link(compiled, outfile)
 

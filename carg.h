@@ -1,3 +1,11 @@
+#undef __c_fail_msg
+#undef __c_fail_exp
+#undef __c_fun
+#undef __c_out
+#undef __c_ret
+#undef __c_expand
+#undef __c_fail
+
 #define __c_fail_msg(file, lineno, msg) "%s: line %d: %s\n", file, lineno, msg
 #define __c_fail_exp(file, lineno, fname) "From %s: line %d: Expanding %s", file, lineno, fname
 

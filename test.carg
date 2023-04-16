@@ -1,13 +1,6 @@
-#include <stdio.h>
+import "test.harg";
 
-safe test(int arg1, int arg2, out(int, int)) {
-    if (arg1 == 0) {
-        fail("ERR");
-    }
-    ret arg1 + arg2, arg1 * arg2;
-}
-
-int main() {
-    expand int a, int b = test(5, 2);
-    printf("%d %d\n", a, b);
+safe testfunc() {
+    printf("Hello\n");
+    ret;
 }
