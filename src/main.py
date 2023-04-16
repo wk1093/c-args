@@ -5,9 +5,31 @@ import re
 import ccomp
 import os
 import time
+import ply
 
+
+ply.lex
 fancy = True
 preprocess = False
+
+cargh = """
+#undef __c_fail_msg
+#undef __c_fail_exp
+#undef __c_fun
+#undef __c_out
+#undef __c_ret
+#undef __c_expand
+#undef __c_fail
+
+#define __c_fail_msg(file, lineno, msg) "%\s: line %\d: %\s\\n", file, lineno, msg
+#define __c_fail_exp(file, lineno, fname) "From %\s: line %\d: Expanding %\s", file, lineno, fname
+
+#define __c_fun int
+#define __c_out(t, n) t* __ret_##n
+#define __c_ret(v, n) *__ret_##n = v;
+#define __c_expand(fname, lineno, file, call, ...) __VA_ARGS__; if (call) { printf(__c_fail_exp(file, lineno, fname)); return 1;};
+#define __c_fail(msg, lineno, file) printf(__c_fail_msg(file, lineno, msg)); return 1;
+"""
 
 lg = LexerGenerator()
 
@@ -84,14 +106,26 @@ lg.ignore(r'//.*')
 
 lexer = lg.build()
 
+def find(filen, fromf):
+    # example find("test.harg", "src/test.carg") # test.harg could be in src/ or current directory
+
+    # find in same directory
+    if os.path.exists(os.path.join(os.path.dirname(fromf), filen)):
+        return os.path.join(os.path.dirname(fromf), filen)
+    
+    # find in current directory
+    if os.path.exists(filen):
+        return filen
+    
+
 
 def compile(a, b):
     files = [] # additional files that need to be deleted after compilation
 
     with open(a, "r") as f:
         test = f.read()
-    with open("carg.h", "r") as f:
-        out = f.read() + "\n"
+
+    out = cargh + "\n"
 
     for token in lexer.lex(test):
         if token.name == "FUNCTION":
@@ -132,6 +166,7 @@ def compile(a, b):
             end = token.value.find('"', start + 1)
             fname = token.value[start + 1:end]
             out += f"#include \"{fname}.h\"\n"
+            fname = find(fname, a)
             f = compile(fname, fname + ".h")
             files += f
             files += [fname + ".h"]
@@ -184,20 +219,20 @@ if __name__ == "__main__":
                 print("Warning: -o is ignored when translating only")
             continue
         elif not sys.argv[i].endswith(".carg"):
-            print("Warning: file", sys.argv[i], "does not end with .carg, skipping")
+            print("### Warning: file", sys.argv[i], "does not end with .carg, skipping")
             continue
-        print("Translating", sys.argv[i])
-        f = compile(sys.argv[i], ".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        print("### Translating", sys.argv[i])
+        f = compile(sys.argv[i], sys.argv[i] + ".c")
         for l in f:
             if l not in files:
                 files.append(l)
-        compiled.append(".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        compiled.append(sys.argv[i] + ".c")
         if fancy:
-            ccomp.format(".".join(sys.argv[i].split(".")[:-1]) + ".c")
+            ccomp.format(sys.argv[i] + ".c")
     
     if not translateOnly:
         for i in compiled:
-            print("Compiling", i+"arg")
+            print("### Compiling", i[:-2])
             ccomp.cmp(i)
             time.sleep(0.1)
     
@@ -207,6 +242,6 @@ if __name__ == "__main__":
         for i in files:
             os.remove(i)
     if not translateOnly:
-        print("Linking", str([a+'arg' for a in compiled])[1:-1], "to", outfile)
+        print("### Linking", str([a[:-2] for a in compiled])[1:-1], "to", outfile)
         ccomp.link(compiled, outfile)
 
