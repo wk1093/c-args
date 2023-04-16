@@ -6,6 +6,7 @@ import ccomp
 import os
 
 outfile = "main"
+fancy = True
 
 lg = LexerGenerator()
 
@@ -82,9 +83,7 @@ def compile(a, b):
         out = f.read() + "\n"
 
     for token in lexer.lex(test):
-        if token.name == "PREPRO":
-            out += token.value + "\n"
-        elif token.name == "FUNCTION":
+        if token.name == "FUNCTION":
             out += "__c_fun "
         elif token.name == "OUT":
             types = [a.strip() for a in token.value[4:-1].split(",")]
@@ -114,7 +113,7 @@ def compile(a, b):
                 out += v + ";"
             out += ");"
         
-        elif token.name == "SEMICOLON" or token.name == "LBRACE" or token.name == "RBRACE":
+        elif token.name == "PREPRO":
             out += token.value + "\n"
         else:
             out += token.value + " "
@@ -133,15 +132,25 @@ if __name__ == "__main__":
         print("Example: python main.py test.carg test2.carg -> test.c test2.c")
         exit(1)
     compiled = []
+    dbg = False
     for i in range(1, len(sys.argv)):
-        if not sys.argv[i].endswith(".carg"):
+        if sys.argv[i] == "-g":
+            dbg = True
+            continue
+        elif not sys.argv[i].endswith(".carg"):
             print("Warning: file", sys.argv[i], "does not end with .carg, skipping")
             continue
         print("Compiling", sys.argv[i], "to", ".".join(sys.argv[i].split(".")[:-1]) + ".c")
         compile(sys.argv[i], ".".join(sys.argv[i].split(".")[:-1]) + ".c")
         compiled.append(".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        if fancy:
+            ccomp.format(".".join(sys.argv[i].split(".")[:-1]) + ".c")
         ccomp.cmp(".".join(sys.argv[i].split(".")[:-1]) + ".c")
-        os.remove(".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        
+    
+    if not dbg:
+        for i in compiled:
+            os.remove(i)
 
     print("Linking", str(compiled)[1:-1], "to", outfile)
     ccomp.link(compiled, outfile)

@@ -2,7 +2,7 @@ from pcpp.preprocessor import Preprocessor, FileInclusionTime, clock
 from pcpp.parser import *
 import tempfile
 import re, os, sys
-from pcpp.parser import STRING_TYPES, default_lexer, trigraph, Macro, Action, OutputDirective, PreprocessorHooks
+from pcpp.parser import trigraph, Macro, Action, OutputDirective, PreprocessorHooks
 
 # example: https://github.com/ned14/pcpp/blob/master/pcpp/pcmd.py
 
