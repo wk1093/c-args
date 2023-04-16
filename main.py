@@ -1,9 +1,15 @@
 from rply import LexerGenerator
 import sys
+from preproc import preproc
+import re
+import ccomp
+import os
+
+outfile = "main"
 
 lg = LexerGenerator()
 
-lg.add('FUNCTION', r'fun')
+lg.add('FUNCTION', r'safe')
 lg.add('RETURN', r'ret\s*(.*?);')
 lg.add('EXPAND', r'expand\s*(.*?)\s*=\s*(.*?);')
 lg.add('OUT', r'out\(.*?\)')
@@ -113,6 +119,11 @@ def compile(a, b):
         else:
             out += token.value + " "
 
+    out = preproc(out)
+
+    out = re.sub(r"#line.*\n", "", out)
+    out = re.sub(r";;", ";", out)
+
     with open(b, "w+") as f:
         f.write(out)
 
@@ -121,10 +132,17 @@ if __name__ == "__main__":
         print("Usage: python main.py <file(s)>")
         print("Example: python main.py test.carg test2.carg -> test.c test2.c")
         exit(1)
+    compiled = []
     for i in range(1, len(sys.argv)):
         if not sys.argv[i].endswith(".carg"):
             print("Warning: file", sys.argv[i], "does not end with .carg, skipping")
             continue
         print("Compiling", sys.argv[i], "to", ".".join(sys.argv[i].split(".")[:-1]) + ".c")
         compile(sys.argv[i], ".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        compiled.append(".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        ccomp.cmp(".".join(sys.argv[i].split(".")[:-1]) + ".c")
+        os.remove(".".join(sys.argv[i].split(".")[:-1]) + ".c")
+
+    print("Linking", str(compiled)[1:-1], "to", outfile)
+    ccomp.link(compiled, outfile)
 
