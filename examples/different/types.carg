@@ -1,0 +1,15 @@
+#include <stdio.h>
+
+safe test(int a, float b, const char* c, out(int, float, const char*)) {
+    if (a == 0) {
+        fail("a is 0");
+    }
+    ret a, b, c;
+}
+
+int main() {
+    expand int a, float b, const char* c = test(1, 2.0, "Hello World!");
+    printf("%d %f %s\n", a, b, c);
+
+    expand a, b, c = test(0, 2.0, "Hello World!");
+}

@@ -10,7 +10,7 @@ import ply
 
 ply.lex
 fancy = True
-preprocess = False
+preprocess = True
 
 cargh = """
 #undef __c_fail_msg
@@ -21,8 +21,8 @@ cargh = """
 #undef __c_expand
 #undef __c_fail
 
-#define __c_fail_msg(file, lineno, msg) "%\s: line %\d: %\s\\n", file, lineno, msg
-#define __c_fail_exp(file, lineno, fname) "From %\s: line %\d: Expanding %\s", file, lineno, fname
+#define __c_fail_msg(file, lineno, msg) "%s: line %d: %s\\n", file, lineno, msg
+#define __c_fail_exp(file, lineno, fname) "From %s: line %d: Expanding %s", file, lineno, fname
 
 #define __c_fun int
 #define __c_out(t, n) t* __ret_##n
@@ -138,7 +138,8 @@ def compile(a, b):
                     out += ", "
         elif token.name == "FAIL":
             lineno = token.getsourcepos().lineno
-            out += "__c_fail(" + token.value[5:-1] + f", {lineno}, \"{a}\")"
+            f = a.replace('\\','/')
+            out += "__c_fail(" + token.value[5:-1] + f", {lineno}, \"{f}\")"
         elif token.name == "RETURN":
             vals = token.value[4:-1].split(",")
             for i, v in enumerate(vals):
@@ -151,9 +152,10 @@ def compile(a, b):
             callnoend = token.value[7:].split("=")[1].strip()[:-2]
             lineno = token.getsourcepos().lineno
             fname = callnoend.split("(")[0].strip()
-            out += f"__c_expand(\"{fname}\", {lineno}, \"{a}\", {callnoend},"
+            f = a.replace('\\','/')
+            out += f"__c_expand(\"{fname}\", {lineno}, \"{f}\", {callnoend},"
             for v in variables:
-                name = v.split(" ")[1]
+                name = v.split(" ")[-1]
                 out += f" &{name},"
             out = out[:-1] + "),"
             for v in variables:
