@@ -1,5 +1,5 @@
 #include <stdio.h>
-import "test.harg";
+import "test/test.harg";
 
 
 int main() {

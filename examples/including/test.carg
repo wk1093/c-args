@@ -1,4 +1,4 @@
-import "test.harg";
+import "test/test.harg";
 
 safe testfunc() {
     printf("Hello\n");

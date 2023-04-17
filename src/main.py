@@ -117,6 +117,9 @@ def find(filen, fromf):
     if os.path.exists(filen):
         return filen
     
+    print(f"[ERROR]: Could not find {filen} from {fromf}")
+    exit(1)
+    
 
 
 def compile(a, b):
@@ -169,6 +172,7 @@ def compile(a, b):
             fname = token.value[start + 1:end]
             out += f"#include \"{fname}.h\"\n"
             fname = find(fname, a)
+            print(f"[INFO]: Found header '{fname}' for '{a}'")
             f = compile(fname, fname + ".h")
             files += f
             files += [fname + ".h"]
@@ -202,6 +206,7 @@ if __name__ == "__main__":
     skip = False
     files = []
     for i in range(1, len(sys.argv)):
+        time.sleep(0.1)
         if skip:
             skip = False
             continue
@@ -209,7 +214,7 @@ if __name__ == "__main__":
             dbg = True
             continue
         elif sys.argv[i] == "-I":
-            print("Include directory is not supported yet")
+            print("[ERROR]: Include directory is not supported yet")
             exit(1) # TODO
         elif sys.argv[i] == "-t":
             translateOnly = True
@@ -217,17 +222,17 @@ if __name__ == "__main__":
         elif sys.argv[i] == "-o":
             skip = True
             if i == len(sys.argv) - 1:
-                print("Error: -o requires an argument")
+                print("[ERROR]: -o requires an argument")
                 exit(1)
             if not translateOnly:
                 outfile = sys.argv[i+1]
             else:
-                print("Warning: -o is ignored when translating only")
+                print("[WARNING]: -o is ignored when translating only")
             continue
         elif not sys.argv[i].endswith(".carg"):
-            print("### Warning: file", sys.argv[i], "does not end with .carg, skipping")
+            print("[WARNING]: file", sys.argv[i], "does not end with .carg, skipping")
             continue
-        print("### Translating", sys.argv[i])
+        print("[INFO]: Translating", sys.argv[i])
         f = compile(sys.argv[i], sys.argv[i] + ".c")
         for l in f:
             if l not in files:
@@ -238,9 +243,9 @@ if __name__ == "__main__":
     
     if not translateOnly:
         for i in compiled:
-            print("### Compiling", i[:-2])
-            ccomp.cmp(i)
             time.sleep(0.1)
+            print("[INFO]: Compiling", i[:-2])
+            ccomp.cmp(i)
     
     if not dbg and not translateOnly:
         for i in compiled:
@@ -248,6 +253,6 @@ if __name__ == "__main__":
         for i in files:
             os.remove(i)
     if not translateOnly:
-        print("### Linking", str([a[:-2] for a in compiled])[1:-1], "to", outfile)
+        print("[INFO]: Linking", str([a[:-2] for a in compiled])[1:-1], "to", outfile)
         ccomp.link(compiled, outfile)
 
