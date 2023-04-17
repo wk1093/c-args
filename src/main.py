@@ -96,6 +96,9 @@ lg.add('RETURN', r'ret(\s)+(.*?);')
 # EXPAND: expand int a, int b = integertuple(5, 2);
 lg.add('EXPAND', r'expand\s*(.*?)\s*=\s*(.*?);')
 
+# EXPANDT: expand call(2); // call is a function that returns nothing
+lg.add('EXPANDT', r'expand\s*(.*?);')
+
 lg.add('OUT', r'out\(.*?\)')
 lg.add('FAIL', r'fail\(.*?\)')
 
@@ -152,6 +155,9 @@ def compile(a, b):
             out += "return 0;"
         elif token.name == "EXPAND":
             variables = [a.strip() for a in token.value[7:].split("=")[0].strip().split(",")]
+            for v in variables:
+                if v == "" or v == " ":
+                    variables.remove(v)
             callnoend = token.value[7:].split("=")[1].strip()[:-2]
             lineno = token.getsourcepos().lineno
             fname = callnoend.split("(")[0].strip()
@@ -176,13 +182,19 @@ def compile(a, b):
             f = compile(fname, fname + ".h")
             files += f
             files += [fname + ".h"]
+        elif token.name == "EXPANDT":
+            callnoend = token.value[7:-1]
+            lineno = token.getsourcepos().lineno
+            fname = callnoend.split("(")[0].strip()
+            f = a.replace('\\','/')
+            out += f"__c_expand(\"{fname}\", {lineno}, \"{f}\", {callnoend}, );"
         else:
             out += token.value + " "
     if preprocess:
         out = preproc(out)
 
     out = re.sub(r"#line.*\n", "", out)
-    out = re.sub(r";;", ";", out)
+    out = re.sub(r";(\s|\n|\r)*;", ";", out)
 
     with open(b, "w+") as f:
         f.write(out)

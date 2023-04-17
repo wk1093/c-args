@@ -1,3 +1,3 @@
 #include <stdio.h>
 
-safe testfunc();
+safe testfunc(int r);

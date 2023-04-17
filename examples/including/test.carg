@@ -1,6 +1,9 @@
 import "test/test.harg";
 
-safe testfunc() {
-    printf("Hello\n");
+safe testfunc(int r) {
+    printf("Hello %d\n", r);
+    if (r == 0) {
+        fail("r is zero!");
+    }
     ret;
 }

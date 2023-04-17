@@ -3,6 +3,8 @@ import "test/test.harg";
 
 
 int main() {
-    testfunc();
+    expand testfunc(1);
+
+    expand testfunc(0); // expanding will give better error messages
     return 0;
 }

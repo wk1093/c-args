@@ -1,5 +1,5 @@
 from distutils.ccompiler import new_compiler
-from distutils.errors import DistutilsExecError, CompileError
+from distutils.errors import DistutilsExecError, CompileError, LinkError
 import os
 
 compiler = new_compiler()
@@ -20,7 +20,7 @@ def cmp(cfile):
 def link(cfiles, outfile):
     try:
         compiler.link_executable(compiler.object_filenames(cfiles, strip_dir=0), outfile)
-    except (DistutilsExecError, CompileError) as e:
+    except (DistutilsExecError, LinkError) as e:
         print("[ERROR]: linking failed")
         print(e)
         print("[ERROR]: Failed to link", str([a[:-2] for a in cfiles])[1:-1], "to", outfile)
